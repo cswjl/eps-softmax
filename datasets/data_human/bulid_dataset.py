@@ -15,7 +15,7 @@ def build_dataset_human(dataset, root, noise_type, noise_path, train_transform, 
                                 transform=test_transform,
                                 noise_type=noise_type
                           )
-    elif dataset == 'CIFAR100':
+    elif dataset == 'cifar100':
         train_dataset = CIFAR100(root=root,
                                 download=True,  
                                 train=True, 

@@ -74,9 +74,8 @@ if __name__ == "__main__":
     parser.add_argument('--loss', type=str, default='ECEandMAE', help='the loss function: CE, ECEandMAE, EFLandMAE ... ')
     args = parser.parse_args()
     args.dataset = args.dataset.lower()
-    if args.noise_rate == '0.0': args.noise_rate == '0'
-    if args.noise_type == 'dependent':
-        args.noise_method = '-' # noise_method is not about dependent noise
+    if args.noise_rate == '0.0': 
+        args.noise_rate == '0'
     if args.dataset == 'cifar10': # change root by yourself
         args.root = args.root + '/CIFAR10'
     elif args.dataset == 'cifar100':

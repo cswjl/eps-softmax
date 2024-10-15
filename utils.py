@@ -18,17 +18,14 @@ def evaluate(loader, model, device=None):
             inputs, targets = inputs.to(device), targets.to(device)
         outputs = model(inputs)
         probabilities = F.softmax(outputs, dim=1)
-
-        # 只计算一次Top-5，然后从中提取Top-1
         _, top5_preds = probabilities.topk(5, dim=1)
-        top1_preds = top5_preds[:, :1]  # Top-1是Top-5中的第一个
-
+        top1_preds = top5_preds[:, :1]  
         correct_top1 += top1_preds.eq(targets.view(-1, 1)).sum().item()
         correct_top5 += top5_preds.eq(targets.view(-1, 1).expand_as(top5_preds)).sum().item()
 
         total += targets.size(0)
 
-    # 计算并返回Top-1和Top-5准确率
+    # Computations and returns Top-1 and Top-5 accuracy rates
     top1_acc = correct_top1 / total
     top5_acc = correct_top5 / total
     return top1_acc, top5_acc
