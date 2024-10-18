@@ -35,4 +35,3 @@ For technical details and full experimental results, please check the paper. If 
 }
 ```
 
-**Thanks:** Moreover, we thank the code implemented by  [Zhou et al.](https://github.com/hitcszx/lnl_sr).
