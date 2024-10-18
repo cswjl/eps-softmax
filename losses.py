@@ -5,7 +5,7 @@ import numpy as np
 
 
 eps = 1e-8
-class ECELoss(nn.Module):
+class ECELoss(nn.Module): # Eps-Softmax with CE loss (ECE)
     def __init__(self, m, eps=1e-8):
         super(ECELoss, self).__init__()
         self.m = m
