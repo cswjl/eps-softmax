@@ -1,6 +1,6 @@
 # [NeurIPS2024] $\epsilon$-Softmax: Approximating One-Hot Vectors for Mitigating Label Noise
 
-This repository is the official implementation.
+This repository is the official **pytorch** implementation.
 
 
 ## How to use
@@ -9,7 +9,7 @@ The main running file is `main.py`.
 * --loss: ECEandMAE, EFLandMAE, etc.
 * --noise_type: symmetric | asymmetric | dependent
 
-**Example**
+**Example:**
 
 ECEandMAE for CIFAR-10 0.8 symmetric noise:
 ```console
@@ -33,3 +33,6 @@ For technical details and full experimental results, please check the paper. If 
   booktitle={The Thirty-eighth Annual Conference on Neural Information Processing Systems},
   year={2024}
 }
+```
+
+**Thanks:** Moreover, we thank the code implemented by  [Zhou et al.](https://github.com/hitcszx/lnl_sr).
