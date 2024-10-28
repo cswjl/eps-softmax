@@ -1,6 +1,6 @@
 # $\epsilon$-Softmax: Approximating One-Hot Vectors for Mitigating Label Noise
 
-This repository is the official **pytorch** implementation of the eps-softmax paper [NeurIPS2024].
+This repository is the official **pytorch** implementation of the [eps-softmax](https://openreview.net/pdf?id=vjsd8Bcipv) [NeurIPS2024].
 
 
 ## How to use
