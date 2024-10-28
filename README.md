@@ -1,26 +1,41 @@
-# [NeurIPS2024] $\epsilon$-Softmax: Approximating One-Hot Vectors for Mitigating Label Noise
+# $\epsilon$-Softmax: Approximating One-Hot Vectors for Mitigating Label Noise
 
-This repository is the official **pytorch** implementation.
+This repository is the official **pytorch** implementation of the eps-softmax paper [NeurIPS2024].
 
 
 ## How to use
-The main running file is `main.py`. 
-* We simplify $\epsilon$-softmax with CE and FL by ECE and EFL
-* --loss: ECEandMAE, EFLandMAE, etc.
-* --noise_type: symmetric | asymmetric | dependent
+**We simplify $\epsilon$-softmax with CE and FL by ECE and EFL in the code.**
 
-**Example:**
+**Benchmark Datasets:** The running file is `main.py`. 
+* --dataset: cifar10 | cifar100, etc.
+* --loss: ECEandMAE, EFLandMAE, CE, GCE, etc.
+* --noise_type: symmetric | asymmetric | dependent (instance-dependent
+noise), etc.
 
-ECEandMAE for CIFAR-10 0.8 symmetric noise:
+**CE $_\epsilon$+MAE (Semi):** The running file is `main_semi.py`. 
+* --dataset: cifar10 | cifar100.
+* --noise_type: human (cifar-n dataset), etc.
+
+**Real-World Datasets:** The running file is `main_real_world.py`. 
+* --dataset: webvision | clothing1m.
+* --loss: ECEandMAE, EFLandMAE, CE, GCE, etc.
+
+## Examples
+
+ECEandMAE for cifar10 0.8 symmetric noise:
 ```console
 $ python3 main.py --dataset cifar10 --noise_type symmetric --noise_rate 0.8 --loss ECEandMAE    
 ```
 
-ECEandMAE for CIFAR-10 0.6 instance-dependent noise:
+ECEandMAE(Semi) for cifar10 human (cifar-n dataset) worst:
 ```console
-$ python3 main.py --dataset cifar10 --noise_type dependent --noise_rate 0.6 --loss ECEandMAE   
+$ python3 main_semi.py --dataset cifar10 --noise_type human --noise_rate worst  
 ```
 
+ECEandMAE for webvision:
+```console
+$ python3 main_real_world.py --dataset webvision --loss ECEandMAE
+```
 
 
 ## Reference

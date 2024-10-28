@@ -12,7 +12,7 @@ else:
 import random
 import torch.utils.data as data
 import torch
-from datasets.data_method3.tools import DependentLabelGenerator
+from datasets.data_dependent.tools import DependentLabelGenerator
 import hashlib
 # from datasets.data_method3.common.utils import download_url, check_integrity
 def check_integrity(fpath, md5):
@@ -142,7 +142,7 @@ class CIFAR10(data.Dataset):
                 if noise_type != 'clean':
                     # noisify train data
                     self.train_noisy_labels = self.train_labels[:]
-                    noise_file = '%s/%s_%s_%.1f.json' % ("./datasets/data_method3/config", self.dataset, noise_type, noise_rate)
+                    noise_file = '%s/%s_%s_%.1f.json' % ("./datasets/data_dependent/config", self.dataset, noise_type, noise_rate)
                     if os.path.exists(noise_file):
                         noise_data = json.load(open(noise_file, "r"))
 
@@ -381,7 +381,7 @@ class CIFAR100(CIFAR10):
                 if noise_type != 'clean':
                     # noisify train data
                     self.train_noisy_labels = self.train_labels[:]
-                    noise_file = '%s/%s_%s_%.1f.json' % ("./datasets/data_method3/config", self.dataset, noise_type, noise_rate)
+                    noise_file = '%s/%s_%s_%.1f.json' % ("./datasets/data_dependent/config", self.dataset, noise_type, noise_rate)
                     if os.path.exists(noise_file):
                         noise_data = json.load(open(noise_file, "r"))
 

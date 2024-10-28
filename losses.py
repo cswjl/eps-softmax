@@ -3,12 +3,12 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 
-
-eps = 1e-8
+    
 class ECELoss(nn.Module): # Eps-Softmax with CE loss (ECE)
     def __init__(self, m, eps=1e-8):
         super(ECELoss, self).__init__()
         self.m = m
+        # eps can affect the effect of this loss
         self.eps = eps
     def forward(self, input, target):
         input = F.softmax(input, dim=1).clone()
@@ -19,26 +19,24 @@ class ECELoss(nn.Module): # Eps-Softmax with CE loss (ECE)
         loss = F.nll_loss(log_soft_out, target)
         return loss.mean()
 
-
 class ECEandMAE(nn.Module):
-    def __init__(self, m=0, alpha=1, beta=1, num_classes=10, eps=1e-8):
+    def __init__(self, m, alpha=1, beta=1, eps=1e-8):
         super(ECEandMAE, self).__init__()
         self.alpha = alpha
         self.beta = beta
-        self.ece = ECELoss(m=m, eps=eps)
-        self.mae = MAELoss(num_classes=num_classes)
-
+        self.ece = ECELoss(m, eps=eps)
+        self.mae = MAELoss()
+        
     def forward(self, input, target):
         loss = self.alpha * self.ece(input, target) + self.beta * self.mae(input, target)
         return loss
-
 class EFLandMAE(nn.Module):
-    def __init__(self, m, alpha=1, beta=1, num_classes=10, gamma=0.1, eps=1e-8):
+    def __init__(self, m, alpha=1, beta=1, gamma=0.1, eps=1e-8):
         super(EFLandMAE, self).__init__()
         self.alpha = alpha
         self.beta = beta
         self.efl = EFocalLoss(m=m, gamma=gamma, eps=eps)
-        self.mae = MAELoss(num_classes=num_classes)
+        self.mae = MAELoss()
         
     def forward(self, input, target):
         loss = self.alpha * self.efl(input, target) + self.beta * self.mae(input, target)
@@ -56,6 +54,7 @@ class EFocalLoss(nn.Module): # Eps-Softmax with FL loss (EFL)
         if isinstance(alpha, list):
             self.alpha = torch.Tensor(alpha)
         self.size_average = size_average
+        # eps affects the effect of this loss
         self.eps = eps
     def forward(self, input, target):
         if input.dim() > 2:
@@ -85,26 +84,20 @@ class EFocalLoss(nn.Module): # Eps-Softmax with FL loss (EFL)
             return loss.mean()
         else:
             return loss.sum()
-
-
-    
-
-
-class MSELoss(nn.Module):
-    def __init__(self, num_classes=10):
+        
+class MSELoss(nn.Module): # with softmax
+    def __init__(self):
         super(MSELoss, self).__init__()
-        self.num_classes = num_classes
-    def forward(self, input, labels):
+    def forward(self, input, target):
         input = F.softmax(input, dim=1)
-        label_one_hot = F.one_hot(labels, self.num_classes)
+        label_one_hot = F.one_hot(target, input.shape[1]).float().to(input.device)
         loss = (input - label_one_hot)**2
         return loss.mean()
 
 
 class SCELoss(nn.Module):
-    def __init__(self, num_classes=10, a=1, b=1):
+    def __init__(self, a=1, b=1):
         super(SCELoss, self).__init__()
-        self.num_classes = num_classes
         self.a = a
         self.b = b
         self.cross_entropy = nn.CrossEntropyLoss()
@@ -113,8 +106,8 @@ class SCELoss(nn.Module):
         ce = self.cross_entropy(pred, labels)
         # RCE
         pred = F.softmax(pred, dim=1)
-        pred = torch.clamp(pred, min=eps, max=1.0)
-        label_one_hot = F.one_hot(labels, self.num_classes).float().to(pred.device)
+        pred = torch.clamp(pred, min=1e-8, max=1.0)
+        label_one_hot = F.one_hot(labels, pred.shape[1]).float().to(pred.device)
         label_one_hot = torch.clamp(label_one_hot, min=1e-4, max=1.0)
         rce = (-1 * torch.sum(pred * torch.log(label_one_hot), dim=1))
 
@@ -123,80 +116,73 @@ class SCELoss(nn.Module):
 
 
 class RCELoss(nn.Module):
-    def __init__(self, num_classes=10, scale=1.0):
+    def __init__(self, scale=1.0):
         super(RCELoss, self).__init__()
-        self.num_classes = num_classes
         self.scale = scale
 
     def forward(self, pred, labels):
         pred = F.softmax(pred, dim=1)
-        pred = torch.clamp(pred, min=eps, max=1.0)
-        label_one_hot = F.one_hot(labels, self.num_classes).float().to(pred.device)
+        pred = torch.clamp(pred, min=1e-8, max=1.0)
+        label_one_hot = F.one_hot(labels, pred.shape[1]).float().to(pred.device)
         label_one_hot = torch.clamp(label_one_hot, min=1e-4, max=1.0)
         loss = (-1 * torch.sum(pred * torch.log(label_one_hot), dim=1))
         return self.scale * loss.mean()
 
 
 class NCELoss(nn.Module):
-    def __init__(self, num_classes, scale=1.0):
+    def __init__(self, scale=1.0):
         super(NCELoss, self).__init__()
-        self.num_classes = num_classes
         self.scale = scale
 
     def forward(self, pred, labels):
         pred = F.log_softmax(pred, dim=1)
-        label_one_hot = F.one_hot(labels, self.num_classes).float().to(pred.device)
+        label_one_hot = F.one_hot(labels, pred.shape[1]).float().to(pred.device)
         loss = -1 * torch.sum(label_one_hot * pred, dim=1) / (-pred.sum(dim=1))
         return self.scale * loss.mean()
 
 class MAELoss(nn.Module):
-    def __init__(self, num_classes=10, scale=2.0):
+    def __init__(self, scale=2.0):
         super(MAELoss, self).__init__()
-        self.num_classes = num_classes
         self.scale = scale
 
     def forward(self, pred, labels):
         pred = F.softmax(pred, dim=1)
-        label_one_hot = F.one_hot(labels, self.num_classes).float().to(pred.device)
+        label_one_hot = F.one_hot(labels, pred.shape[1]).float().to(pred.device)
         loss = 1. - torch.sum(label_one_hot * pred, dim=1)
         return self.scale * loss.mean()
 
 class GCELoss(nn.Module):
-    def __init__(self, num_classes=10, q=0.7):
+    def __init__(self, q=0.7):
         super(GCELoss, self).__init__()
         self.q = q
-        self.num_classes = num_classes
 
     def forward(self, pred, labels):
         pred = F.softmax(pred, dim=1)
-        pred = torch.clamp(pred, min=eps, max=1.0)
-        label_one_hot = F.one_hot(labels, self.num_classes).float().to(pred.device)
+        pred = torch.clamp(pred, min=1e-8, max=1.0)
+        label_one_hot = F.one_hot(labels, pred.shape[1]).float().to(pred.device)
         loss = (1. - torch.pow(torch.sum(label_one_hot * pred, dim=1), self.q)) / self.q
         return loss.mean()
 
 
 class AGCELoss(nn.Module):
-    def __init__(self, num_classes=10, a=1, q=2, eps=eps, scale=1.):
+    def __init__(self, a=1, q=2, scale=1.):
         super(AGCELoss, self).__init__()
         self.a = a
         self.q = q
-        self.num_classes = num_classes
-        self.eps = eps
         self.scale = scale
 
     def forward(self, pred, labels):
         pred = F.softmax(pred, dim=1)
-        label_one_hot = F.one_hot(labels, self.num_classes).float().to(pred.device)
+        label_one_hot = F.one_hot(labels, pred.shape[1]).float().to(pred.device)
         loss = ((self.a+1)**self.q - torch.pow(self.a + torch.sum(label_one_hot * pred, dim=1), self.q)) / self.q
         return loss.mean() * self.scale
 
 class AUELoss(nn.Module):
-    def __init__(self, num_classes=10, a=1.5, q=0.9, eps=eps, scale=1.0):
+    def __init__(self, num_classes=10, a=1.5, q=0.9, scale=1.0):
         super(AUELoss, self).__init__()
         self.num_classes = num_classes
         self.a = a
         self.q = q
-        self.eps = eps
         self.scale = scale
 
     def forward(self, pred, labels):
@@ -206,37 +192,32 @@ class AUELoss(nn.Module):
         return loss.mean() * self.scale
 
 
-
-
 class AExpLoss(torch.nn.Module):
-    def __init__(self, num_classes=10, a=3, scale=1.0):
+    def __init__(self, a=3, scale=1.0):
         super(AExpLoss, self).__init__()
-        self.num_classes = num_classes
         self.a = a
         self.scale = scale
 
     def forward(self, pred, labels):
         pred = F.softmax(pred, dim=1)
-        label_one_hot = F.one_hot(labels, self.num_classes).float().to(pred.device)
+        label_one_hot = F.one_hot(labels, pred.shape[1]).float().to(pred.device)
         loss = torch.exp(-torch.sum(label_one_hot * pred, dim=1) / self.a)
         return loss.mean() * self.scale
 
 class NCEandRCE(nn.Module):
-    def __init__(self, alpha=1., beta=1., num_classes=10):
+    def __init__(self, alpha=1., beta=1.):
         super(NCEandRCE, self).__init__()
-        self.num_classes = num_classes
-        self.nce = NCELoss(num_classes=num_classes, scale=alpha)
-        self.rce = RCELoss(num_classes=num_classes, scale=beta)
+        self.nce = NCELoss(scale=alpha)
+        self.rce = RCELoss(scale=beta)
 
     def forward(self, pred, labels):
         return self.nce(pred, labels) + self.rce(pred, labels)
 
 class NCEandMAE(nn.Module):
-    def __init__(self, alpha=1., beta=1., num_classes=10):
+    def __init__(self, alpha=1., beta=1.):
         super(NCEandMAE, self).__init__()
-        self.num_classes = num_classes
-        self.nce = NCELoss(num_classes=num_classes, scale=alpha)
-        self.mae = MAELoss(num_classes=num_classes, scale=beta)
+        self.nce = NCELoss(scale=alpha)
+        self.mae = MAELoss(scale=beta)
 
     def forward(self, pred, labels):
         return self.nce(pred, labels) + self.mae(pred, labels)
@@ -315,11 +296,10 @@ class FocalLoss(torch.nn.Module):
             return loss.sum()
 
 class NormalizedFocalLoss(torch.nn.Module):
-    def __init__(self, gamma=0.5, num_classes=10, alpha=None, size_average=True, scale=1.0):
+    def __init__(self, gamma=0.5, size_average=True, scale=1.0):
         super(NormalizedFocalLoss, self).__init__()
         self.gamma = gamma
         self.size_average = size_average
-        self.num_classes = num_classes
         self.scale = scale
 
     def forward(self, input, target):
@@ -338,144 +318,154 @@ class NormalizedFocalLoss(torch.nn.Module):
             return loss.sum()
 
 class NFLandRCE(torch.nn.Module):
-    def __init__(self, alpha=1., beta=1., num_classes=10, gamma=0.5):
+    def __init__(self, alpha=1., beta=1., gamma=0.5):
         super(NFLandRCE, self).__init__()
-        self.num_classes = num_classes
-        self.nfl = NormalizedFocalLoss(gamma=gamma, num_classes=num_classes, scale=alpha)
-        self.rce = RCELoss(num_classes=num_classes, scale=beta)
+        self.nfl = NormalizedFocalLoss(gamma=gamma, scale=alpha)
+        self.rce = RCELoss(scale=beta)
 
     def forward(self, pred, labels):
         return self.nfl(pred, labels) + self.rce(pred, labels)
 
 
 class NFLandMAE(torch.nn.Module):
-    def __init__(self, alpha=1., beta=1., num_classes=10, gamma=0.5):
+    def __init__(self, alpha=1., beta=1., gamma=0.5):
         super(NFLandMAE, self).__init__()
-        self.num_classes = num_classes
-        self.nfl = NormalizedFocalLoss(gamma=gamma, num_classes=num_classes, scale=alpha)
-        self.mae = MAELoss(num_classes=num_classes, scale=beta)
+        self.nfl = NormalizedFocalLoss(gamma=gamma, scale=alpha)
+        self.mae = MAELoss(scale=beta)
 
     def forward(self, pred, labels):
         return self.nfl(pred, labels) + self.mae(pred, labels)
 
 
 class NCEandAGCE(torch.nn.Module):
-    def __init__(self, alpha=1., beta = 1., num_classes=10, a=3, q=1.5):
+    def __init__(self, alpha=1., beta = 1., a=3, q=1.5):
         super(NCEandAGCE, self).__init__()
-        self.num_classes = num_classes
-        self.nce = NCELoss(num_classes=num_classes, scale=alpha)
-        self.agce = AGCELoss(num_classes=num_classes, a=a, q=q, scale=beta)
+        self.nce = NCELoss(scale=alpha)
+        self.agce = AGCELoss(a=a, q=q, scale=beta)
 
     def forward(self, pred, labels):
         return self.nce(pred, labels) + self.agce(pred, labels)
 
 
 class NCEandAUE(torch.nn.Module):
-    def __init__(self, alpha=1., beta=1., num_classes=10, a=6, q=1.5):
+    def __init__(self, alpha=1., beta=1., a=6, q=1.5):
         super(NCEandAUE, self).__init__()
-        self.num_classes = num_classes
-        self.nce = NCELoss(num_classes=num_classes, scale=alpha)
-        self.aue = AUELoss(num_classes=num_classes, a=a, q=q, scale=beta)
+        self.nce = NCELoss(scale=alpha)
+        self.aue = AUELoss(a=a, q=q, scale=beta)
 
     def forward(self, pred, labels):
         return self.nce(pred, labels) + self.aue(pred, labels)
 
 class NCEandAEL(torch.nn.Module):
-    def __init__(self, alpha=1., beta=4., num_classes=10, a=2.5):
+    def __init__(self, alpha=1., beta=4., a=2.5):
         super(NCEandAEL, self).__init__()
-        self.num_classes = num_classes
-        self.nce = NCELoss(num_classes=num_classes, scale=alpha)
-        self.aue = AExpLoss(num_classes=num_classes, a=a, scale=beta)
+        self.nce = NCELoss(scale=alpha)
+        self.aue = AExpLoss(a=a, scale=beta)
 
     def forward(self, pred, labels):
         return self.nce(pred, labels) + self.aue(pred, labels)
 
 
 class NFLandAGCE(torch.nn.Module):
-    def __init__(self, alpha=1., beta = 1., num_classes=10, a=3, q=2):
+    def __init__(self, alpha=1., beta = 1., a=3, q=2):
         super(NFLandAGCE, self).__init__()
-        self.num_classes = num_classes
-        self.nce = NormalizedFocalLoss(num_classes=num_classes, scale=alpha)
-        self.agce = AGCELoss(num_classes=num_classes, a=a, q=q, scale=beta)
+        self.nce = NormalizedFocalLoss(scale=alpha)
+        self.agce = AGCELoss(a=a, q=q, scale=beta)
 
     def forward(self, pred, labels):
         return self.nce(pred, labels) + self.agce(pred, labels)
 
 
 class NFLandAUE(torch.nn.Module):
-    def __init__(self, alpha=1., beta = 1., num_classes=10, a=1.5, q=0.9):
+    def __init__(self, alpha=1., beta = 1., a=1.5, q=0.9):
         super(NFLandAUE, self).__init__()
-        self.num_classes = num_classes
-        self.nce = NormalizedFocalLoss(num_classes=num_classes, scale=alpha)
-        self.aue = AUELoss(num_classes=num_classes, a=a, q=q, scale=beta)
+        self.nce = NormalizedFocalLoss(scale=alpha)
+        self.aue = AUELoss(a=a, q=q, scale=beta)
 
     def forward(self, pred, labels):
         return self.nce(pred, labels) + self.aue(pred, labels)
 
 
 class NFLandAEL(torch.nn.Module):
-    def __init__(self, alpha=1., beta = 1., num_classes=10, a=3):
+    def __init__(self, alpha=1., beta = 1., a=3):
         super(NFLandAEL, self).__init__()
-        self.num_classes = num_classes
-        self.nce = NormalizedFocalLoss(num_classes=num_classes, scale=alpha)
-        self.ael = AExpLoss(num_classes=num_classes, a=a, scale=beta)
+        self.nce = NormalizedFocalLoss(scale=alpha)
+        self.ael = AExpLoss(a=a, scale=beta)
 
     def forward(self, pred, labels):
         return self.nce(pred, labels) + self.ael(pred, labels)
 
 
+class NormalizedNegativeFocalLoss(torch.nn.Module):
+    def __init__(self, gamma=0.5, min_prob=1e-8) -> None:
+        super().__init__()
+        self.gamma = gamma
+        self.min_prob = min_prob
+        self.logmp = torch.tensor(self.min_prob).log()
+        self.A = - (1 - min_prob)**gamma * self.logmp
+    
+    def forward(self, input, target):
+        logmp = self.logmp.to(input.device)
+        target = target.view(-1, 1)
+        logpt = F.log_softmax(input, dim=1).clamp(min=logmp)
+        normalizor = torch.sum(-1 * (1 - logpt.data.exp()) ** self.gamma * logpt, dim=1)
+        logpt = logpt.gather(1, target)
+        logpt = logpt.view(-1)
+        pt = torch.autograd.Variable(logpt.data.exp())
+        loss = -1 * (1-pt)**self.gamma * logpt
+        loss = 1 - (self.A - loss) / (input.shape[1] * self.A - normalizor)
+        return loss.mean()
+    
 
-def custom_kl_div(prediction, target):
-    output_pos = target * (target.clamp(min=eps).log() - prediction)
-    zeros = torch.zeros_like(output_pos)
-    output = torch.where(target > 0, output_pos, zeros)
-    output = torch.sum(output, axis=1)
-    return output.mean()
-
-class JensenShannonDivergenceWeightedCustom(torch.nn.Module):
-    def __init__(self, num_classes, weights, eps=eps):
-        super(JensenShannonDivergenceWeightedCustom, self).__init__()
-        self.num_classes = num_classes
-        self.weights = [float(w) for w in weights.split(' ')]
-        self.eps = eps
-        assert abs(1.0 - sum(self.weights)) < 0.001
-        
+class NormalizedNegativeCrossEntropy(torch.nn.Module):
+    def __init__(self, min_prob=1e-8) -> None:
+        super().__init__()
+        self.min_prob = min_prob
+        self.A = - torch.tensor(min_prob).log()
+    
     def forward(self, pred, labels):
-        preds = list()
-        if type(pred) == list:
-            for i, p in enumerate(pred):
-                preds.append(F.softmax(p, dim=1)) 
-        else:
-            preds.append(F.softmax(pred, dim=1))
+        pred = F.softmax(pred, dim=1)
+        pred = pred.clamp(min=self.min_prob, max=1)
+        pred = self.A + pred.log() # - log(eps) - (- log(p(k|x)))
+        label_one_hot = F.one_hot(labels, pred.shape[1]).to(pred.device)
+        nnce = 1 - (label_one_hot * pred).sum(dim=1) / pred.sum(dim=1)
+        return nnce.mean()
+    
+class NCEandNNCE(torch.nn.Module):
+    def __init__(self, alpha=1., beta = 1., eps=1e-8):
+        super(NCEandNNCE, self).__init__()
+        self.alpha = alpha
+        self.beta = beta
+        self.nce = NCELoss(scale=1)
+        self.nnce = NormalizedNegativeCrossEntropy(min_prob=eps)
 
-        labels = F.one_hot(labels, self.num_classes).float() 
-        distribs = [labels] + preds
-        assert len(self.weights) == len(distribs)
+    def forward(self, pred, labels):
+        return self.alpha * self.nce(pred, labels) + self.beta * self.nnce(pred, labels)
+    
+class NFLandNNFL(torch.nn.Module):
+    def __init__(self, alpha=1., beta = 1., eps=1e-8):
+        super(NFLandNNFL, self).__init__()
+        self.alpha = alpha
+        self.beta = beta
+        self.nfl = NormalizedFocalLoss(scale=1)
+        self.nnfl = NormalizedNegativeFocalLoss(min_prob=eps, gamma=0.5)
 
-        mean_distrib = sum([w*d for w,d in zip(self.weights, distribs)])
-        mean_distrib_log = mean_distrib.clamp(self.eps, 1.0).log()
-        
-        jsw = sum([w*custom_kl_div(mean_distrib_log, d) for w,d in zip(self.weights, distribs)])
-        return jsw
-
-
+    def forward(self, pred, labels):
+        return self.alpha * self.nfl(pred, labels) + self.beta * self.nnfl(pred, labels)
 
 
 class CEandLC(nn.Module):
-    def __init__(self, delta, eps=eps):
+    def __init__(self, delta):
         super(CEandLC, self).__init__()
-        self.eps = eps
         self.delta = delta
     def forward(self, input, target):
         temp = 1/self.delta
-        norms = torch.norm(input, p=2, dim=-1, keepdim=True) + self.eps
+        norms = torch.norm(input, p=2, dim=-1, keepdim=True) + 1e-8
         logits_norm = torch.div(input, norms) * self.delta
         clip = (norms > temp).expand(-1, input.shape[-1])
         logits_final = torch.where(clip, logits_norm, input)
-
         input = F.softmax(logits_final, dim=1)
-  
-        input = torch.clamp(input, min=self.eps, max=1.0)
+        input = torch.clamp(input, min=1e-12, max=1.0)
         log_soft_out = torch.log(input)
         loss = F.nll_loss(log_soft_out, target)
         return loss.mean()
@@ -485,7 +475,7 @@ def get_diff_logits(y_pred, y_true):
     return y_pred - y_true_logits
 
 class LDRLoss_V1(nn.Module):
-    def __init__(self, threshold=2.0, Lambda=1.0):
+    def __init__(self, threshold=0.1, Lambda=1.0):
         super(LDRLoss_V1, self).__init__()
         self.threshold = threshold
         self.Lambda = Lambda

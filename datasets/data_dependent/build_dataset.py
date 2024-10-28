@@ -1,6 +1,6 @@
-from datasets.data_method3.cifar import CIFAR10, CIFAR100
+from datasets.data_dependent.cifar import CIFAR10, CIFAR100
 
-def build_dataset_method3(dataset, root, noise_type, noise_rate, train_transform, test_transform):
+def build_dataset_dependent(dataset, root, noise_type, noise_rate, train_transform, test_transform):
     if dataset == 'cifar10':
         train_dataset = CIFAR10(root=root,
                         download=True,

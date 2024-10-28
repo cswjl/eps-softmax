@@ -52,6 +52,7 @@ def get_value_from_kv(keys, kvs):
 
     return np.array(labels, dtype=int)
 
+#change root by yourself 
 save_file = '../../database/clothing1M/Clothing1m-data.npy'
 clean_test_key_file = '../../database/clothing1M/annotations/clean_test_key_list.txt'
 clean_val_key_file = '../../database/clothing1M/annotations/clean_val_key_list.txt'

@@ -1,8 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
-
+import math
 
 
 class ConvBrunch(nn.Module):
@@ -19,10 +18,10 @@ class ConvBrunch(nn.Module):
         return self.conv(x)
 
 class CNN(nn.Module):
-    def __init__(self, type='CIFAR10'):
+    def __init__(self, type='cifar10'):
         super(CNN, self).__init__()
         self.type = type
-        if type == 'CIFAR10':
+        if type == 'cifar10':
             self.block1 = nn.Sequential(
                 ConvBrunch(3, 64, 3),
                 ConvBrunch(64, 64, 3),
@@ -35,7 +34,6 @@ class CNN(nn.Module):
                 ConvBrunch(128, 196, 3),
                 ConvBrunch(196, 196, 3),
                 nn.MaxPool2d(kernel_size=2, stride=2))
-            # self.global_avg_pool = nn.AdaptiveAvgPool2d(1)
             self.fc1 = nn.Sequential(
                 nn.Linear(4 * 4 * 196, 256),
                 nn.BatchNorm1d(256),
@@ -43,23 +41,20 @@ class CNN(nn.Module):
             )
             self.fc2 = nn.Linear(256, 10)
             self.fc_size = 4 * 4 * 196
-        elif type == 'MNIST':
+        elif type == 'mnist':
             self.block1 = nn.Sequential(
                 ConvBrunch(1, 32, 3),
                 nn.MaxPool2d(kernel_size=2, stride=2))
             self.block2 = nn.Sequential(
                 ConvBrunch(32, 64, 3),
                 nn.MaxPool2d(kernel_size=2, stride=2))
-            # self.global_avg_pool = nn.AdaptiveAvgPool2d(1)
             self.fc1 = nn.Sequential(
                 nn.Linear(64 * 7 * 7, 128),
                 nn.BatchNorm1d(128),
                 nn.ReLU(),
             )
             self.fc2 = nn.Linear(128, 10)
-            # self.fc2 = self.normliner
             self.fc_size = 64 * 7 * 7
-        
         self._reset_prams()
 
     def _reset_prams(self):
@@ -73,14 +68,11 @@ class CNN(nn.Module):
     def forward(self, x, show=False):
         x = self.block1(x)
         x = self.block2(x)
-        if self.type == 'CIFAR10':
+        if self.type == 'cifar10':
             x = self.block3(x) 
-        # x = self.global_avg_pool(x)
-        # x = x.view(x.shape[0], -1)
         x = x.view(-1, self.fc_size)
         z = self.fc1(x) # features
         x = self.fc2(z)
-        # w = self.fc2.weight.data # weights
         if show:
             return x, z
         else:
@@ -194,8 +186,6 @@ class ResNet(nn.Module):
         return
 
 
-def ResNet14(num_classes=10):
-    return ResNet(BasicBlock, [1, 2, 2, 1], num_classes=num_classes)
 
 def ResNet18(num_classes=10):
     return ResNet(BasicBlock, [2, 2, 2, 2], num_classes=num_classes)
@@ -215,3 +205,34 @@ def ResNet101(num_classes=10):
 
 def ResNet152(num_classes=10):
     return ResNet(Bottleneck, [3, 8, 36, 3], num_classes=num_classes)
+
+def conv3x3(in_planes, out_planes, stride=1):
+    return nn.Conv2d(in_planes, out_planes, kernel_size=3, stride=stride, padding=1, bias=False)
+
+class PreActBlock(nn.Module):
+    '''Pre-activation version of the BasicBlock.'''
+    expansion = 1
+
+    def __init__(self, in_planes, planes, stride=1):
+        super(PreActBlock, self).__init__()
+        self.bn1 = nn.BatchNorm2d(in_planes)
+        self.conv1 = conv3x3(in_planes, planes, stride)
+        self.bn2 = nn.BatchNorm2d(planes)
+        self.conv2 = conv3x3(planes, planes)
+
+        self.shortcut = nn.Sequential()
+        if stride != 1 or in_planes != self.expansion*planes:
+            self.shortcut = nn.Sequential(
+                nn.Conv2d(in_planes, self.expansion*planes, kernel_size=1, stride=stride, bias=False)
+            )
+
+    def forward(self, x):
+        out = F.relu(self.bn1(x))
+        shortcut = self.shortcut(out)
+        out = self.conv1(out)
+        out = self.conv2(F.relu(self.bn2(out)))
+        out += shortcut
+        return out
+
+def PreResNet18(num_classes=10):
+    return ResNet(PreActBlock, [2,2,2,2], num_classes=num_classes)
