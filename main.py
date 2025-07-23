@@ -12,8 +12,8 @@ from torch.utils.tensorboard import SummaryWriter
 
 parser = argparse.ArgumentParser(description='Robust Loss Functions for Learning with Noisy Labels: Benchmark Datasets')
 # dataset settings
-parser.add_argument('--dataset', type=str, default="cifar10", choices=['mnist', 'cifar10', 'cifar100'], help='dataset name')
-parser.add_argument('--root', type=str, default="../database", help='the dataset root, change root yourself')
+parser.add_argument('--dataset', type=str, default="cifar100", choices=['mnist', 'cifar10', 'cifar100'], help='dataset name')
+parser.add_argument('--root', type=str, default="../data", help='the dataset root, change root yourself')
 parser.add_argument('--noise_type', type=str, default='symmetric', choices=['symmetric', 'asymmetric', 'dependent', 'human'], 
                     help='label noise type. human is the cifar-n dataset. using clean label by setting noise rate = 0')
 parser.add_argument('--noise_rate', type=str, default='0.8', 
@@ -29,24 +29,19 @@ parser.add_argument('--test_freq', type=int, default=1, help='epoch frequency to
 parser.add_argument('--save_model', default=False, action="store_true", help='whether to save trained model')
 # training settings
 # loss: ECEandMAE: Eps-Softmax with CE loss (ECE) and MAE; EFLandMAE: Eps-Softmax with FL loss (EFL) and MAE
-parser.add_argument('--loss', type=str, default='EFLandMAE', help='the loss function: CE, ECEandMAE, EFLandMAE, GCE ... ')
+parser.add_argument('--loss', type=str, default='ECEandMAE', help='the loss function: CE, ECEandMAE, EFLandMAE, GCE ... ')
 args = parser.parse_args()
 args.dataset = args.dataset.lower()
 
 # change root yourself
 if args.dataset == 'cifar10': 
-    args.root = args.root + '/CIFAR10'
+    args.root = args.root + '/cifar10'
 elif args.dataset == 'cifar100':
-    args.root = args.root + '/CIFAR100'
+    args.root = args.root + '/cifar100'
 
 os.environ['CUDA_VISIBLE_DEVICES'] = args.gpus
-if torch.cuda.is_available():
-    device = 'cuda'
-    # canceling this can completely fix random seed, but will slow down your training
-    torch.backends.cudnn.benchmark = True
-else:
-    device = 'cpu'
-print('We are using', device)
+device = 'cuda'
+torch.backends.cudnn.benchmark = True
 
 def train(args, i):
     seed_everything(args.seed + i)

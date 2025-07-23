@@ -14,20 +14,15 @@ from torch.utils.tensorboard import SummaryWriter
 parser = argparse.ArgumentParser(description='Robust Loss Functions for Learning with Noisy Labels: Real-World Datasets')
 # dataset settings
 parser.add_argument('--dataset', type=str, default="webvision", choices=['webvision', 'clothing1m'], help='dataset name')
-parser.add_argument('--root', type=str, default="../database", help='the data root')
+parser.add_argument('--root', type=str, default="../data", help='the data root')
 # initialization settings
-parser.add_argument('--gpus', type=str, default='0', help='0 or 1, per id corresponding 4 gpus, change by yourself')
+parser.add_argument('--gpus', type=str, default='0, 1, 2, 3', help='gup id, can multiple-gpu, change yourself')
 parser.add_argument('--grad_bound', type=bool, default=True, help='the gradient norm bound, following previous work')
 # training settings
 parser.add_argument('--loss', type=str, default='ECEandMAE', help='the loss function: CE, ECEandMAE, EFLandMAE ... ')
 args = parser.parse_args()
 args.dataset = args.dataset.lower()
 
-# change gpu id yourself
-if args.gpus == '0':
-    os.environ["CUDA_VISIBLE_DEVICES"] = "0, 1, 2, 3"
-elif args.gpus == '1':
-    os.environ["CUDA_VISIBLE_DEVICES"] = "4, 5, 6, 7"
 torch.backends.cudnn.benchmark = True
 torch.set_float32_matmul_precision('high')
 gpu_nums = torch.cuda.device_count() 
@@ -40,8 +35,7 @@ if args.dataset == 'webvision':
     epochs = 250
     l1_weight_decay, l2_weight_decay = get_weight_decay_config(args)
     batch_size = int(256 / gpu_nums)
-    # change root yourself
-    args.root = args.root + '/WebVision'
+    # change root yourself in txt file in ./datasets
     args.grad_bound = True
     nesterov = True
     model = resnet50(num_classes=50, zero_init_residual=True)
@@ -53,7 +47,7 @@ elif args.dataset == 'clothing1m':
     l1_weight_decay, l2_weight_decay = get_weight_decay_config(args)
     batch_size = int(256 / gpu_nums)
     # change root yourself
-    args.root = args.root + '/clothing1M'
+    args.root = args.root + '/clothing1m'
     args.grad_bound = False
     nesterov = False
     model = resnet50(weights=ResNet50_Weights.DEFAULT)

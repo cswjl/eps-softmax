@@ -52,14 +52,14 @@ def get_value_from_kv(keys, kvs):
 
     return np.array(labels, dtype=int)
 
-#change root by yourself 
-save_file = '../../database/clothing1M/Clothing1m-data.npy'
-clean_test_key_file = '../../database/clothing1M/annotations/clean_test_key_list.txt'
-clean_val_key_file = '../../database/clothing1M/annotations/clean_val_key_list.txt'
-noisy_train_key_file = '../../database/clothing1M/annotations/noisy_train_key_list.txt'
-noisy_label_kv = '../../database/clothing1M/annotations/noisy_label_kv.txt'
-clean_label_kv = '../../database/clothing1M/annotations/clean_label_kv.txt'
-share_file = '../../database/clothing1M/annotations/share.txt'
+#change root yourself 
+save_file = '../data/clothing1m/Clothing1m-data.npy'
+clean_test_key_file = '../data/clothing1m/annotations/clean_test_key_list.txt'
+clean_val_key_file = '../data/clothing1m/annotations/clean_val_key_list.txt'
+noisy_train_key_file = '../data/clothing1m/annotations/noisy_train_key_list.txt'
+noisy_label_kv = '../data/clothing1m/annotations/noisy_label_kv.txt'
+clean_label_kv = '../data/clothing1m/annotations/clean_label_kv.txt'
+share_file = '../data/clothing1m/annotations/share.txt'
 
 noisy_train_key_list = read_key_list(noisy_train_key_file)
 clean_val_key_list = read_key_list(clean_val_key_file)

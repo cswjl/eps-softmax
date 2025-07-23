@@ -40,7 +40,7 @@ def data_loader(args, batch_size):
     train_loader = DataLoader(dataset=train_dataset,
                                 batch_size=batch_size,
                                 shuffle=True,
-                                num_workers=16,
+                                num_workers=8,
                                 pin_memory=True,
                                 persistent_workers=True,
                                 worker_init_fn=worker_init_fn)
@@ -48,7 +48,7 @@ def data_loader(args, batch_size):
     test_loader = DataLoader(dataset=test_dataset,
                                 batch_size=batch_size*2,
                                 shuffle=False,
-                                num_workers=16,
+                                num_workers=8,
                                 pin_memory=True,
                                 persistent_workers=True)
     return train_loader, test_loader
@@ -117,16 +117,16 @@ class Clothing1M_Dataset(Dataset):
         return self.train_data, self.train_labels
 
 def webvision_loader(args, batch_size):
-    train_transform, test_transform = get_transforms('webvision')
-    web_train_dataset = WebVisionDataset(path=args.root,
+    train_transform, test_transform = get_transforms(args.dataset)
+    web_train_dataset = WebVisionDataset(path='./datasets',
                                 file_name='webvision_mini_train.txt',
                                 transform=train_transform)
-    web_test_dataset = WebVisionDataset(path=args.root,
+    web_test_dataset = WebVisionDataset(path='./datasets',
                                     file_name='webvision_mini_val.txt',
                                     transform=test_transform)
     
     img_test_set = WebVisionDataset(path='./datasets',
-                                file_name='imgnet_val.txt',
+                                file_name='imagenet_val.txt',
                                 transform=test_transform)
 
     web_train_loader = DataLoader(dataset=web_train_dataset,
@@ -160,6 +160,7 @@ def target_transform(label):
     target = torch.from_numpy(label).long()
     return target
 
+# For the first use, please run ClothingData.py first.
 def clothing1m_loader(args, batch_size):
     train_transform, test_transform = get_transforms('clothing1m')
     kvDic = np.load(args.root + '/Clothing1m-data.npy', allow_pickle=True).item()

@@ -171,47 +171,6 @@ class CIFAR100(datasets.CIFAR100):
         if self.trans_matrix is not None:
             self.targets = create_noisy_labels(self.targets, trans_matrix)
 
-class WebVisionDataset:
-    def __init__(self, root, file_name='webvision_mini_train.txt',
-                 transform=None, target_transform=None):
-        self.target_list = []
-        self.root = root
-        self.load_file(os.path.join(root, file_name))
-        self.transform = transform
-        self.target_transform = target_transform
-        return
-
-    def load_file(self, filename):
-        f = open(filename, "r")
-        for line in f:
-            train_file, label = line.split()
-            self.target_list.append((train_file, int(label)))
-        f.close()
-        return
-
-    def __len__(self):
-        return len(self.target_list)
-
-    def __getitem__(self, index):
-        impath, target = self.target_list[index]
-        img = Image.open(os.path.join(self.root, impath)).convert("RGB")
-        if self.transform is not None:
-            img = self.transform(img)
-        return img, target
-
-class ImageNetMini(datasets.ImageNet):
-    def __init__(self, root, split='val', **kwargs):
-        super(ImageNetMini, self).__init__(root, split=split, **kwargs)
-        self.new_targets = []
-        self.new_images = []
-        for i, (file, cls_id) in enumerate(self.imgs):
-            if cls_id <= 49:
-                self.new_targets.append(cls_id)
-                self.new_images.append((file, cls_id))
-        self.imgs = self.new_images
-        self.targets = self.new_targets
-        self.samples = self.imgs
-        return
     
 def build_dataset_method2(dataset, root, noise_type, noise_rate, train_transform, test_transform):
     if dataset == 'fashionmnist':

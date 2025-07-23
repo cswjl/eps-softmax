@@ -18,10 +18,10 @@ from datasets.data_human.bulid_dataset import build_dataset_human
 
 parser = argparse.ArgumentParser(description='Method with Semi-Supervised Learning')
 # dataset settings
-parser.add_argument('--dataset', type=str, default="cifar10", choices=['cifar10', 'cifar100'], help='dataset name')
-parser.add_argument('--root', type=str, default="../database/", help='the data root')
-parser.add_argument('--noise_type', type=str, default='symmetric', choices=['symmetric', 'asymmetric', 'human'], help='the noise type')
-parser.add_argument('--noise_rate', type=str, default='0.8', help='the noise rate'
+parser.add_argument('--dataset', type=str, default="cifar100", choices=['cifar10', 'cifar100'], help='dataset name')
+parser.add_argument('--root', type=str, default="../data", help='the data root')
+parser.add_argument('--noise_type', type=str, default='human', choices=['symmetric', 'asymmetric', 'human'], help='the noise type')
+parser.add_argument('--noise_rate', type=str, default='noisy100', help='the noise rate'
 'human: cifar10: clean, aggre, worst, rand1, rand2, rand3 | cifar100: clean100, noisy100')
 # initialization settings
 parser.add_argument('--gpus', type=str, default='0')
@@ -34,12 +34,9 @@ parser.add_argument('--loss', type=str, default='ECEandMAE(Semi)', help='method 
 
 args = parser.parse_args()
 os.environ['CUDA_VISIBLE_DEVICES'] = args.gpus
-if torch.cuda.is_available():
-    device = 'cuda'
-    torch.backends.cudnn.benchmark = True
-else:
-    device = 'cpu'
-print('We are using', device)
+device = 'cuda'
+torch.backends.cudnn.benchmark = True
+
 
 criterion = ECEandMAE(m=10000, alpha=0.5, beta=1)
 criterion2 = ECEandMAE(m=10, alpha=1, beta=1)
@@ -53,7 +50,7 @@ lamb_u = 1
 threshold = 0.2
 
 if args.dataset == 'cifar10':
-    args.root = args.root + '/CIFAR10'
+    args.root = args.root + '/cifar10'
     num_classes = 10
     if args.noise_type == 'human': 
         if args.noise_rate == 'worst':
@@ -81,7 +78,7 @@ if args.dataset == 'cifar10':
     test_transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))])
    
 elif args.dataset == 'cifar100':
-    args.root = args.root + '/CIFAR100'
+    args.root = args.root + '/cifar100'
     num_classes = 100
     if args.noise_type == 'human': 
         if args.noise_rate == 'noisy100':

@@ -133,7 +133,7 @@ class CIFAR10(data.Dataset):
 
     def load_label(self):
         #NOTE only load manual training label
-        noise_label = torch.load(self.noise_path)
+        noise_label = torch.load(self.noise_path, weights_only=False)
         if isinstance(noise_label, dict):
             if "clean_label" in noise_label.keys():
                 clean_label = torch.tensor(noise_label['clean_label'])

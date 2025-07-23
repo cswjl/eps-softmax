@@ -3,9 +3,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 
-    
+eps=1e-8
+
 class ECELoss(nn.Module): # Eps-Softmax with CE loss (ECE)
-    def __init__(self, m, eps=1e-8):
+    def __init__(self, m, eps=eps):
         super(ECELoss, self).__init__()
         self.m = m
         # eps can affect the effect of this loss
@@ -20,7 +21,7 @@ class ECELoss(nn.Module): # Eps-Softmax with CE loss (ECE)
         return loss.mean()
 
 class ECEandMAE(nn.Module):
-    def __init__(self, m, alpha=1, beta=1, eps=1e-8):
+    def __init__(self, m, alpha=1, beta=1, eps=eps):
         super(ECEandMAE, self).__init__()
         self.alpha = alpha
         self.beta = beta
@@ -31,7 +32,7 @@ class ECEandMAE(nn.Module):
         loss = self.alpha * self.ece(input, target) + self.beta * self.mae(input, target)
         return loss
 class EFLandMAE(nn.Module):
-    def __init__(self, m, alpha=1, beta=1, gamma=0.1, eps=1e-8):
+    def __init__(self, m, alpha=1, beta=1, gamma=0.1, eps=eps):
         super(EFLandMAE, self).__init__()
         self.alpha = alpha
         self.beta = beta
@@ -44,7 +45,7 @@ class EFLandMAE(nn.Module):
 
 
 class EFocalLoss(nn.Module): # Eps-Softmax with FL loss (EFL)
-    def __init__(self, gamma=0.1, alpha=None, size_average=True, m=0, eps=1e-8):
+    def __init__(self, gamma=0.1, alpha=None, size_average=True, m=0, eps=eps):
         super(EFocalLoss, self).__init__()
         self.gamma = gamma
         self.alpha = alpha
@@ -106,7 +107,7 @@ class SCELoss(nn.Module):
         ce = self.cross_entropy(pred, labels)
         # RCE
         pred = F.softmax(pred, dim=1)
-        pred = torch.clamp(pred, min=1e-8, max=1.0)
+        pred = torch.clamp(pred, min=eps, max=1.0)
         label_one_hot = F.one_hot(labels, pred.shape[1]).float().to(pred.device)
         label_one_hot = torch.clamp(label_one_hot, min=1e-4, max=1.0)
         rce = (-1 * torch.sum(pred * torch.log(label_one_hot), dim=1))
@@ -122,7 +123,7 @@ class RCELoss(nn.Module):
 
     def forward(self, pred, labels):
         pred = F.softmax(pred, dim=1)
-        pred = torch.clamp(pred, min=1e-8, max=1.0)
+        pred = torch.clamp(pred, min=eps, max=1.0)
         label_one_hot = F.one_hot(labels, pred.shape[1]).float().to(pred.device)
         label_one_hot = torch.clamp(label_one_hot, min=1e-4, max=1.0)
         loss = (-1 * torch.sum(pred * torch.log(label_one_hot), dim=1))
@@ -158,7 +159,7 @@ class GCELoss(nn.Module):
 
     def forward(self, pred, labels):
         pred = F.softmax(pred, dim=1)
-        pred = torch.clamp(pred, min=1e-8, max=1.0)
+        pred = torch.clamp(pred, min=eps, max=1.0)
         label_one_hot = F.one_hot(labels, pred.shape[1]).float().to(pred.device)
         loss = (1. - torch.pow(torch.sum(label_one_hot * pred, dim=1), self.q)) / self.q
         return loss.mean()
@@ -397,7 +398,7 @@ class NFLandAEL(torch.nn.Module):
 
 
 class NormalizedNegativeFocalLoss(torch.nn.Module):
-    def __init__(self, gamma=0.5, min_prob=1e-8) -> None:
+    def __init__(self, gamma=0.5, min_prob=eps) -> None:
         super().__init__()
         self.gamma = gamma
         self.min_prob = min_prob
@@ -418,7 +419,7 @@ class NormalizedNegativeFocalLoss(torch.nn.Module):
     
 
 class NormalizedNegativeCrossEntropy(torch.nn.Module):
-    def __init__(self, min_prob=1e-8) -> None:
+    def __init__(self, min_prob=eps) -> None:
         super().__init__()
         self.min_prob = min_prob
         self.A = - torch.tensor(min_prob).log()
@@ -432,7 +433,7 @@ class NormalizedNegativeCrossEntropy(torch.nn.Module):
         return nnce.mean()
     
 class NCEandNNCE(torch.nn.Module):
-    def __init__(self, alpha=1., beta = 1., eps=1e-8):
+    def __init__(self, alpha=1., beta = 1., eps=eps):
         super(NCEandNNCE, self).__init__()
         self.alpha = alpha
         self.beta = beta
@@ -443,7 +444,7 @@ class NCEandNNCE(torch.nn.Module):
         return self.alpha * self.nce(pred, labels) + self.beta * self.nnce(pred, labels)
     
 class NFLandNNFL(torch.nn.Module):
-    def __init__(self, alpha=1., beta = 1., eps=1e-8):
+    def __init__(self, alpha=1., beta = 1., eps=eps):
         super(NFLandNNFL, self).__init__()
         self.alpha = alpha
         self.beta = beta
@@ -460,7 +461,7 @@ class CEandLC(nn.Module):
         self.delta = delta
     def forward(self, input, target):
         temp = 1/self.delta
-        norms = torch.norm(input, p=2, dim=-1, keepdim=True) + 1e-8
+        norms = torch.norm(input, p=2, dim=-1, keepdim=True) + eps
         logits_norm = torch.div(input, norms) * self.delta
         clip = (norms > temp).expand(-1, input.shape[-1])
         logits_final = torch.where(clip, logits_norm, input)
