@@ -1,6 +1,6 @@
 <div align="center">
 
-# ε-Softmax
+# $\epsilon$-Softmax
 
 ### Approximating One-Hot Vectors for Mitigating Label Noise
 
@@ -19,10 +19,10 @@
 
 ## ✨ Overview
 
-**$\epsilon$-Softmax** approximates one-hot vectors to mitigate label noise. This repository provides the official implementation and training scripts for benchmark datasets, semi-supervised learning, and real-world noisy datasets.
+This repository provides training scripts for benchmark, semi-supervised, and real-world noisy-label learning.
 
-- **Loss functions:** $\epsilon$-softmax with cross-entropy (CE) or focal loss (FL), combined with mean absolute error (MAE).
-- **Noise settings:** Symmetric, asymmetric, instance-dependent, and human label noise.
+- **Losses:** $\epsilon$-softmax with CE or FL, combined with MAE.
+- **Noise types:** symmetric, asymmetric, instance-dependent, human, and real-world.
 - **Datasets:** CIFAR-10, CIFAR-100, CIFAR-N, WebVision, and Clothing1M.
 
 > [!NOTE]
@@ -32,28 +32,15 @@
 
 ## 🖼️ Poster
 
-<div align="center">
-
-<a href="assets/poster.png">
-  <img src="assets/poster.png" alt="ε-Softmax research poster" width="100%">
-</a>
-
-<!-- [View full-resolution poster](assets/poster.png) -->
-
-</div>
+![ε-Softmax poster](poster.png)
 
 <a id="usage"></a>
 
 ## 🛠️ Usage
 
-### Get the code
-
 ```bash
-git clone https://github.com/cswjl/eps-softmax.git
-cd eps-softmax
+git clone https://github.com/cswjl/eps-softmax.git && cd eps-softmax
 ```
-
-### Choose a training script
 
 | Setting | Entry point | Datasets | Noise types |
 | :--- | :--- | :--- | :--- |
@@ -61,20 +48,16 @@ cd eps-softmax
 | Semi-supervised | [`main_semi.py`](main_semi.py) | `cifar10`, `cifar100` | `symmetric`, `asymmetric`, `dependent`, `human` |
 | Real-world | [`main_real_world.py`](main_real_world.py) | `webvision`, `clothing1m` | Real-world label noise |
 
-### Configure an experiment
-
-| Argument | Description | Example values |
+| Argument | Description | Examples |
 | :--- | :--- | :--- |
-| `--dataset` | Dataset to train on | `cifar10`, `cifar100`, `webvision`, `clothing1m` |
-| `--loss` | Loss function for benchmark and real-world training | `ECEandMAE`, `EFLandMAE`, `CE`, `GCE` |
-| `--noise_type` | Label noise type for benchmark and semi-supervised training | `symmetric`, `asymmetric`, `dependent`, `human` (see supported settings above) |
-| `--noise_rate` | Synthetic noise rate or human annotation variant | `0.8`, `worst`, `noisy100` |
+| `--dataset` | Dataset | `cifar10`, `cifar100`, `webvision`, `clothing1m` |
+| `--loss` | Loss function (benchmark and real-world) | `ECEandMAE`, `EFLandMAE`, `CE`, `GCE` |
+| `--noise_type` | Noise type (benchmark and semi-supervised) | `symmetric`, `asymmetric`, `dependent`, `human` |
+| `--noise_rate` | Noise rate, or CIFAR-N label set with `human` | `0.8`, `worst`, `noisy100` |
 | `--root` | Dataset root directory | `../data` (default) |
 
-For CIFAR-N experiments, use `--noise_type human` with a matching annotation variant: `worst` for CIFAR-10 or `noisy100` for CIFAR-100, for example.
-
-> [!TIP]
-> Set `--root` to your local data directory. For WebVision, also update the image paths in the dataset lists under [`datasets/`](datasets/), as indicated in [`main_real_world.py`](main_real_world.py). Training scripts use CUDA; prepare a compatible PyTorch environment before running experiments.
+<!-- > [!NOTE]
+> Training requires CUDA. Set `--root` to your data directory; for WebVision and Clothing1M, also update the image paths in the list files under [`datasets/`](datasets/). -->
 
 <details>
 <summary><strong>📂 Repository structure</strong></summary>
@@ -97,38 +80,14 @@ eps-softmax/
 
 ## 🚀 Examples
 
-### CIFAR-10 · 80% symmetric noise
-
-Train with **ECE + MAE** on CIFAR-10:
-
 ```bash
+# CIFAR-10 · 80% symmetric noise · ECE + MAE
 python3 main.py --dataset cifar10 --noise_type symmetric --noise_rate 0.8 --loss ECEandMAE
-```
 
-### CIFAR-N · Human label noise
-
-Train with **ECE + MAE (Semi)** using the CIFAR-10 `worst` human annotation variant:
-
-```bash
+# CIFAR-10N · worst human labels · ECE + MAE (Semi)
 python3 main_semi.py --dataset cifar10 --noise_type human --noise_rate worst
-```
 
-<!-- ### CIFAR · Instance-dependent label noise
-
-Train with **ECE + MAE (Semi)** using the same dependent-noise data loader as the benchmark script:
-
-```bash
-python3 main_semi.py --dataset cifar10 --noise_type dependent --noise_rate 0.4
-python3 main_semi.py --dataset cifar100 --noise_type dependent --noise_rate 0.6
-```
-
-Precomputed noisy labels for rates `0.2`, `0.4`, and `0.6` are included in [`datasets/data_dependent/config/`](datasets/data_dependent/config/). At `0.6`, the per-class sample selection count `k` starts at `1500` for CIFAR-10 and `150` for CIFAR-100; these are heuristic defaults to tune for your experiments. -->
-
-### WebVision · Real-world label noise
-
-Train with **ECE + MAE** on WebVision:
-
-```bash
+# WebVision · real-world noise · ECE + MAE
 python3 main_real_world.py --dataset webvision --loss ECEandMAE
 ```
 
@@ -136,13 +95,15 @@ python3 main_real_world.py --dataset webvision --loss ECEandMAE
 
 ## 🎓 Citation
 
-For method details and experimental results, see our [paper](https://openreview.net/pdf?id=vjsd8Bcipv). If you find this work useful in your research, please consider citing:
+If you find this work useful, please cite our [paper](https://openreview.net/pdf?id=vjsd8Bcipv):
 
 ```bibtex
-@inproceedings{wang2024epsilonsoftmax,
+@article{wang2024epsilon,
   title={$\epsilon$-Softmax: Approximating One-Hot Vectors for Mitigating Label Noise},
-  author={Jialiang, Wang and Xiong, Zhou and Deming, Zhai and Junjun, Jiang and Xiangyang, Ji and Xianming, Liu},
-  booktitle={The Thirty-eighth Annual Conference on Neural Information Processing Systems},
+  author={Wang, Jialiang and Zhou, Xiong and Zhai, Deming and Jiang, Junjun and Ji, Xiangyang and Liu, Xianming},
+  journal={Advances in Neural Information Processing Systems},
+  volume={37},
+  pages={32012--32038},
   year={2024}
 }
 ```
@@ -151,13 +112,12 @@ For method details and experimental results, see our [paper](https://openreview.
 
 ## 📬 Contact
 
-For questions about the paper or code, please contact **Jialiang Wang** at [cswjl@stu.hit.edu.cn](mailto:cswjl@stu.hit.edu.cn).
+Questions about the paper or code? Contact **Jialiang Wang** at [cswjl@stu.hit.edu.cn](mailto:cswjl@stu.hit.edu.cn).
 
 ---
 
 <div align="center">
 
-
-**⭐ Star us on GitHub - it motivates us a lot!**
+**⭐ Star us on GitHub — it motivates us a lot!**
 
 </div>
