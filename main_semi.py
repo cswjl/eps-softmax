@@ -14,14 +14,15 @@ from utils import Semi_Labeled_Dataset, Semi_Unlabeled_Dataset, AverageMeter, pr
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader, Dataset, RandomSampler, SequentialSampler
 from datasets.data_method1.build_dataset import build_dataset_method1
+from datasets.data_dependent.build_dataset import build_dataset_dependent
 from datasets.data_human.bulid_dataset import build_dataset_human
 
 parser = argparse.ArgumentParser(description='Method with Semi-Supervised Learning')
 # dataset settings
 parser.add_argument('--dataset', type=str, default="cifar100", choices=['cifar10', 'cifar100'], help='dataset name')
 parser.add_argument('--root', type=str, default="../data", help='the data root')
-parser.add_argument('--noise_type', type=str, default='human', choices=['symmetric', 'asymmetric', 'human'], help='the noise type')
-parser.add_argument('--noise_rate', type=str, default='noisy100', help='the noise rate'
+parser.add_argument('--noise_type', type=str, default='human', choices=['symmetric', 'asymmetric', 'dependent', 'human'], help='the noise type')
+parser.add_argument('--noise_rate', type=str, default='noisy100', help='synthetic noise rate (e.g. 0.2, 0.4, 0.6 for dependent); '
 'human: cifar10: clean, aggre, worst, rand1, rand2, rand3 | cifar100: clean100, noisy100')
 # initialization settings
 parser.add_argument('--gpus', type=str, default='0')
@@ -62,8 +63,8 @@ if args.dataset == 'cifar10':
             k = 3500
         elif args.noise_rate == '0.4':
             k = 2500
-        elif args.noise_rate == '0.5':
-            k = 2000
+        elif args.noise_rate == '0.6':
+            k = 1500  # Heuristic starting value; tune for dependent noise.
         elif args.noise_rate == '0.8':
             k = 1000
         else:
@@ -90,8 +91,8 @@ elif args.dataset == 'cifar100':
             k = 350
         elif args.noise_rate == '0.4':
             k = 250
-        elif args.noise_rate == '0.5':
-            k = 200
+        elif args.noise_rate == '0.6':
+            k = 150  # Heuristic starting value; tune for dependent noise.
         elif args.noise_rate == '0.8':
             k = 100
         else:
@@ -286,6 +287,11 @@ def run(args):
         noise_rate = float(args.noise_rate)
         train_dataset, test_dataset = build_dataset_method1(args.dataset, args.root, args.noise_type, noise_rate, train_transform, test_transform)
         train_data, train_targets = train_dataset.data, train_dataset.targets
+    elif args.noise_type == 'dependent':
+        noise_rate = float(args.noise_rate)
+        train_dataset, test_dataset = build_dataset_dependent(args.dataset, args.root, args.noise_type, noise_rate, train_transform, test_transform)
+        train_data = train_dataset.train_data
+        train_targets = train_dataset.train_noisy_labels
     elif args.noise_type == 'human':
         noise_type_map = {'clean':'clean_label', 'worst': 'worse_label', 'aggre': 'aggre_label', 'rand1': 'random_label1', 'rand2': 'random_label2', 'rand3': 'random_label3', 'clean100': 'clean_label', 'noisy100': 'noisy_label'}
         noise_type = noise_type_map[args.noise_rate]
@@ -324,7 +330,7 @@ def run(args):
                                 num_workers=16,
                                 pin_memory=True,
                                 persistent_workers=True)
-    if args.noise_type == 'human':
+    if args.noise_type in ['human', 'dependent']:
         model1 = ResNet34(num_classes=num_classes).to(device)
         model2 = ResNet34(num_classes=num_classes).to(device)
     else:
@@ -394,7 +400,3 @@ if __name__ == "__main__":
 
     logger.info(args.dataset+' '+args.loss+' best acc: %.2f±%.2f, last acc: %.2f±%.2f \n' % 
                 (best_accs.mean(), best_accs.std(), last_accs.mean(), last_accs.std()))
-
-    
-
-    
